@@ -8,10 +8,11 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // This is critical: It allows 'process.env.API_KEY' to work in the browser
+      // Expose environment variables to the browser
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
-      // If you have other env vars (like Supabase keys), add them here:
-      // 'process.env.SUPABASE_URL': JSON.stringify(env.SUPABASE_URL),
+      'process.env.EMAILJS_SERVICE_ID': JSON.stringify(env.EMAILJS_SERVICE_ID),
+      'process.env.EMAILJS_TEMPLATE_ID': JSON.stringify(env.EMAILJS_TEMPLATE_ID),
+      'process.env.EMAILJS_PUBLIC_KEY': JSON.stringify(env.EMAILJS_PUBLIC_KEY),
     }
   };
 });

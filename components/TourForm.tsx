@@ -5,11 +5,6 @@ import { supabase } from '../services/supabaseClient';
 import emailjs from '@emailjs/browser';
 import { LoadingState, TourRequest, TourResponse } from '../types';
 
-// --- REPLACE THESE WITH YOUR KEYS FROM EMAILJS.COM ---
-const EMAILJS_SERVICE_ID = 'YOUR_SERVICE_ID_HERE'; 
-const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID_HERE';
-const EMAILJS_PUBLIC_KEY = 'YOUR_PUBLIC_KEY_HERE';
-
 const TourForm: React.FC = () => {
   const [formData, setFormData] = useState<TourRequest>({
     fullName: '',
@@ -64,12 +59,15 @@ const TourForm: React.FC = () => {
       }
 
       // 2. Send Email Notification (to You)
-      // Check if the user has replaced the placeholder keys
-      if (EMAILJS_SERVICE_ID !== 'YOUR_SERVICE_ID_HERE') {
+      const serviceId = process.env.EMAILJS_SERVICE_ID;
+      const templateId = process.env.EMAILJS_TEMPLATE_ID;
+      const publicKey = process.env.EMAILJS_PUBLIC_KEY;
+
+      if (serviceId && templateId && publicKey) {
         try {
           await emailjs.send(
-            EMAILJS_SERVICE_ID,
-            EMAILJS_TEMPLATE_ID,
+            serviceId,
+            templateId,
             {
               from_name: safeFormData.fullName,
               from_email: safeFormData.email,
@@ -78,13 +76,13 @@ const TourForm: React.FC = () => {
               party_size: safeFormData.partySize,
               special_requests: safeFormData.specialRequests
             },
-            EMAILJS_PUBLIC_KEY
+            publicKey
           );
         } catch (emailError) {
           console.error("Email notification failed:", emailError);
         }
       } else {
-        console.warn("EmailJS keys not configured yet. Notification skipped.");
+        console.warn("EmailJS keys not configured in .env file. Notification skipped.");
       }
 
       // 3. Generate AI Concierge Response (for the Guest)
