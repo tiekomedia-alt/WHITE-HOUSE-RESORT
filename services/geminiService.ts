@@ -1,0 +1,52 @@
+import { GoogleGenAI, Type } from "@google/genai";
+import { TourRequest, TourResponse } from "../types";
+
+export const submitTourRequest = async (request: TourRequest): Promise<TourResponse> => {
+  // Directly use process.env.API_KEY as per guidelines
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  const prompt = `
+    Act as the Event Coordinator for "White House Resort Inc.", a premier Victorian-style wedding and event venue in Wilmington, Delaware.
+    A guest has submitted a tour request:
+    - Name: ${request.fullName}
+    - Date: ${request.date}
+    - Party Size: ${request.partySize}
+    - Special Requests: ${request.specialRequests || "None"}
+
+    Process this request and return a JSON object:
+    1. 'confirmationId': A unique mock ID.
+    2. 'conciergeMessage': A warm, professional response inviting them to see the 3-story suite and landscaped grounds. Mention "where dreams come true".
+    3. 'estimatedDuration': Estimate based on party size (approx 45-60 mins).
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            confirmationId: { type: Type.STRING },
+            conciergeMessage: { type: Type.STRING },
+            estimatedDuration: { type: Type.STRING },
+          },
+          required: ["confirmationId", "conciergeMessage", "estimatedDuration"],
+        },
+      },
+    });
+
+    const text = response.text;
+    if (!text) throw new Error("No response from Concierge AI");
+    
+    return JSON.parse(text) as TourResponse;
+  } catch (error) {
+    console.error("Error submitting tour:", error);
+    return {
+      confirmationId: "WHR-BACKUP-001",
+      conciergeMessage: "Thank you for your interest in White House Resort. We look forward to showing you our venue where dreams come true.",
+      estimatedDuration: "60 minutes",
+    };
+  }
+};

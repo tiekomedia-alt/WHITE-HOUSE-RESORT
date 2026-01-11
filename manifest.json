@@ -1,0 +1,22 @@
+
+{
+  "name": "White House Resort",
+  "short_name": "WHR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdfbf7",
+  "theme_color": "#C5A059",
+  "description": "Where Dreams Come True - Premier Wedding Venue in Wilmington, Delaware",
+  "icons": [
+    {
+      "src": "https://res.cloudinary.com/dspngcwzj/image/upload/v1768092652/The_White_House_Inc.__Logo_zqy54j.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://res.cloudinary.com/dspngcwzj/image/upload/v1768092652/The_White_House_Inc.__Logo_zqy54j.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
