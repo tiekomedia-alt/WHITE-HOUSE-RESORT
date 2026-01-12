@@ -64,7 +64,7 @@ const App: React.FC = () => {
              <a href="https://web.facebook.com/WhiteHouseResortInc" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-whr-gold transition-colors" aria-label="Facebook">
                 <FacebookIcon className="h-5 w-5" />
              </a>
-             <a href="https://web.facebook.com/WhiteHouseResortInc" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-whr-gold transition-colors" aria-label="Instagram">
+             <a href="https://www.instagram.com/whitehouseresortinc/" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-whr-gold transition-colors" aria-label="Instagram">
                 <InstagramIcon className="h-5 w-5" />
              </a>
              <div className="h-4 w-px bg-gray-600 mx-1"></div>
@@ -314,7 +314,7 @@ const App: React.FC = () => {
             <a href="https://web.facebook.com/WhiteHouseResortInc" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-whr-gold transition-colors transform hover:scale-110">
                <FacebookIcon className="h-8 w-8" />
             </a>
-            <a href="https://web.facebook.com/WhiteHouseResortInc" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-whr-gold transition-colors transform hover:scale-110">
+            <a href="https://www.instagram.com/whitehouseresortinc/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-whr-gold transition-colors transform hover:scale-110">
                <InstagramIcon className="h-8 w-8" />
             </a>
          </div>
@@ -350,7 +350,7 @@ const App: React.FC = () => {
          {/* Copyright Footer */}
          <div className="mt-16 border-t border-whr-gold/20 pt-8">
             <p className="font-serif text-xs text-gray-500 uppercase tracking-widest">
-              © 2026 Compassionate Heart World Mission. All rights reserved.
+              © 2026 White House Resort Inc. All rights reserved.
             </p>
          </div>
       </footer>
