@@ -39,8 +39,8 @@ const TourForm: React.FC = () => {
     };
 
     try {
-      // 1. Save to Supabase (Your "Dashboard")
-      const { error: dbError } = await supabase
+      // 1. Save to Supabase (Your "Dashboard") - Non-blocking
+      supabase
         .from('tour_requests')
         .insert([
           { 
@@ -51,47 +51,47 @@ const TourForm: React.FC = () => {
             party_size: safeFormData.partySize,
             special_requests: safeFormData.specialRequests
           }
-        ]);
+        ])
+        .then(({ error }) => {
+           if (error) console.warn("Dashboard save failed (continuing):", error);
+        });
 
-      if (dbError) {
-        console.error("Dashboard save failed:", dbError);
-        // We continue anyway, as this is internal logging
-      }
-
-      // 2. Send Email Notification (to You)
-      const serviceId = process.env.EMAILJS_SERVICE_ID;
-      const templateId = process.env.EMAILJS_TEMPLATE_ID;
-      const publicKey = process.env.EMAILJS_PUBLIC_KEY;
+      // 2. Send Email Notification (to You) - Non-blocking
+      // CHANGED: Use import.meta.env with VITE_ prefix
+      const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+      const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+      const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
       if (serviceId && templateId && publicKey) {
-        try {
-          await emailjs.send(
-            serviceId,
-            templateId,
-            {
-              from_name: safeFormData.fullName,
-              from_email: safeFormData.email,
-              phone: safeFormData.phone,
-              date: safeFormData.date,
-              party_size: safeFormData.partySize,
-              special_requests: safeFormData.specialRequests
-            },
-            publicKey
-          );
-        } catch (emailError) {
-          console.error("Email notification failed:", emailError);
-        }
-      } else {
-        console.warn("EmailJS keys not configured in .env file. Notification skipped.");
+        emailjs.send(
+          serviceId,
+          templateId,
+          {
+            from_name: safeFormData.fullName,
+            from_email: safeFormData.email,
+            phone: safeFormData.phone,
+            date: safeFormData.date,
+            party_size: safeFormData.partySize,
+            special_requests: safeFormData.specialRequests
+          },
+          publicKey
+        ).catch(err => console.warn("Email failed (continuing):", err));
       }
 
       // 3. Generate AI Concierge Response (for the Guest)
+      // This is the critical UI step.
       await new Promise(resolve => setTimeout(resolve, 800)); // Small delay for UX
+      
       const result = await submitTourRequest(safeFormData as TourRequest);
-      setResponse(result);
-      setStatus(LoadingState.SUCCESS);
+      
+      if (result) {
+        setResponse(result);
+        setStatus(LoadingState.SUCCESS);
+      } else {
+        throw new Error("No response received");
+      }
     } catch (error) {
-      console.error(error);
+      console.error("Submission error:", error);
       setStatus(LoadingState.ERROR);
     }
   }, [formData]);
@@ -110,7 +110,7 @@ const TourForm: React.FC = () => {
       </div>
 
       {status === LoadingState.SUCCESS && response ? (
-        <div className="text-center bg-whr-cream p-6 md:p-8 border border-whr-gold/30">
+        <div className="text-center bg-whr-cream p-6 md:p-8 border border-whr-gold/30 animate-fade-in-up">
           <div className="text-whr-gold text-5xl mb-4">✨</div>
           <h3 className="text-xl md:text-2xl font-serif text-whr-dark mb-4">Request Confirmed</h3>
           <p className="text-gray-600 mb-6 font-serif italic text-base md:text-lg">"{response.conciergeMessage}"</p>
@@ -124,6 +124,12 @@ const TourForm: React.FC = () => {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
+          {status === LoadingState.ERROR && (
+             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded relative text-sm text-center">
+                Something went wrong. Please call us at (302) 419-8890 instead.
+             </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             <div className="group">
               <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2 group-focus-within:text-whr-gold transition-colors">Full Name</label>
@@ -165,8 +171,8 @@ const TourForm: React.FC = () => {
               className="w-full border-b-2 border-gray-200 focus:border-whr-gold outline-none py-3 bg-transparent transition-colors resize-none text-base" placeholder="Wedding, Birthday, etc..." />
           </div>
           <button type="submit" disabled={status === LoadingState.LOADING} 
-            className="w-full bg-black text-white py-4 uppercase tracking-[0.2em] hover:bg-whr-gold transition-colors duration-300 active:bg-whr-gray">
-            {status === LoadingState.LOADING ? 'Processing...' : 'Submit Request'}
+            className="w-full bg-black text-white py-4 uppercase tracking-[0.2em] hover:bg-whr-gold transition-colors duration-300 active:bg-whr-gray disabled:opacity-50 disabled:cursor-not-allowed">
+            {status === LoadingState.LOADING ? 'Processing Request...' : 'Submit Request'}
           </button>
         </form>
       )}

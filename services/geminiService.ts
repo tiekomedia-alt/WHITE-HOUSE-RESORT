@@ -1,8 +1,8 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { TourRequest, TourResponse } from "../types";
 
 export const submitTourRequest = async (request: TourRequest): Promise<TourResponse> => {
-  // Directly use process.env.API_KEY as per guidelines
+  // Use process.env.API_KEY directly as per guidelines
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const prompt = `
@@ -20,7 +20,12 @@ export const submitTourRequest = async (request: TourRequest): Promise<TourRespo
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    // Create a timeout promise that rejects after 10 seconds
+    const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Request timed out")), 10000);
+    });
+
+    const aiPromise = ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
@@ -37,12 +42,16 @@ export const submitTourRequest = async (request: TourRequest): Promise<TourRespo
       },
     });
 
+    // Race the AI request against the timeout
+    const response = await Promise.race([aiPromise, timeoutPromise]) as GenerateContentResponse;
+
     const text = response.text;
     if (!text) throw new Error("No response from Concierge AI");
     
     return JSON.parse(text) as TourResponse;
   } catch (error) {
     console.error("Error submitting tour:", error);
+    // Fallback on error/timeout to ensure user sees success state
     return {
       confirmationId: "WHR-BACKUP-001",
       conciergeMessage: "Thank you for your interest in White House Resort. We look forward to showing you our venue where dreams come true.",

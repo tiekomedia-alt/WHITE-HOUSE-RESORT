@@ -91,13 +91,13 @@ const Gallery: React.FC = () => {
 
            {/* Carousel Window */}
            <div className="w-full h-full overflow-hidden bg-black relative">
-              {/* Slider Track - Added w-full to fix scaling issues */}
+              {/* Slider Track */}
               <div 
                 className="flex w-full h-full transition-transform duration-[1500ms] cubic-bezier(0.4, 0, 0.2, 1)"
                 style={{ transform: `translateX(-${currentIndex * 100}%)` }}
               >
                 {IMAGES.map((img, index) => (
-                  <div key={index} className="min-w-full h-full relative shrink-0">
+                  <div key={index} className="min-w-full w-full h-full relative flex-none">
                     <img 
                       src={img.src} 
                       alt={`Gallery moment ${index + 1}`} 
