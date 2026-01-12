@@ -350,7 +350,7 @@ const App: React.FC = () => {
          {/* Copyright Footer */}
          <div className="mt-16 border-t border-whr-gold/20 pt-8">
             <p className="font-serif text-xs text-gray-500 uppercase tracking-widest">
-              © 2026 WHITE HOUSE RESORT INC. All rights reserved.
+              © 2026 Compassionate Heart World Mission. All rights reserved.
             </p>
          </div>
       </footer>
