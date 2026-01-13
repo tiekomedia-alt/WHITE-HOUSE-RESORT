@@ -1,7 +1,38 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Configuration derived from your provided Anon Key
-const supabaseUrl = 'https://skntbnxqsqwncukrgujcd.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrbnRibnhxc3duY3Vrcmd1amNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxNDk4NTgsImV4cCI6MjA4MzcyNTg1OH0.7ECGPssXhAUBGwu_lwVOJ3iXbBgrDf2BK1WleXjwb-s';
+// Load variables from .env safely
+// We wrap this in a check because in some environments (or during initialization before Vite injects env), import.meta.env might be undefined.
+const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : ({} as any);
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = env.VITE_SUPABASE_URL;
+const supabaseKey = env.VITE_SUPABASE_ANON_KEY;
+
+let supabaseInstance: SupabaseClient | any;
+
+// Only initialize if we have a valid-looking URL (prevents ENOTFOUND crashes)
+if (supabaseUrl && typeof supabaseUrl === 'string' && supabaseUrl.startsWith('http') && supabaseKey) {
+  supabaseInstance = createClient(supabaseUrl, supabaseKey);
+} else {
+  console.warn("Supabase credentials missing or invalid in .env. Using fallback mock mode.");
+  
+  // Safe Mock Client to prevent crashes during 'createClient' or usage
+  supabaseInstance = {
+    from: (table: string) => ({
+      insert: async (data: any) => {
+        console.warn(`[Mock Supabase] Would insert into ${table}:`, data);
+        // Simulate an error so the App falls back to EmailJS automatically
+        return { 
+          data: null, 
+          error: { message: "Supabase not configured (Mock Mode)" } 
+        };
+      },
+      select: () => ({
+        eq: () => ({
+           single: async () => ({ data: null, error: null })
+        })
+      })
+    })
+  };
+}
+
+export const supabase = supabaseInstance;
