@@ -16,7 +16,6 @@ const TourForm: React.FC = () => {
 
   const [status, setStatus] = useState<LoadingState>(LoadingState.IDLE);
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const [debugInfo, setDebugInfo] = useState<string>("");
   const [response, setResponse] = useState<TourResponse | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -31,71 +30,92 @@ const TourForm: React.FC = () => {
     e.preventDefault();
     setStatus(LoadingState.LOADING);
     setErrorMessage("");
-    setDebugInfo("");
     
     // 1. Prepare Data
     const safeFormData = {
       ...formData,
       partySize: Number(formData.partySize) || 1
     };
+    
+    const dbPayload = { 
+      full_name: safeFormData.fullName,
+      email: safeFormData.email,
+      phone: safeFormData.phone,
+      date: safeFormData.date,
+      party_size: safeFormData.partySize,
+      special_requests: safeFormData.specialRequests
+    };
 
-    console.log("Attempting submission with:", safeFormData);
+    console.log("Starting submission process...");
 
     try {
-      // 2. Submit to Supabase
-      // We define the payload explicitly to match snake_case columns in DB
-      const dbPayload = { 
-        full_name: safeFormData.fullName,
-        email: safeFormData.email,
-        phone: safeFormData.phone,
-        date: safeFormData.date,
-        party_size: safeFormData.partySize,
-        special_requests: safeFormData.specialRequests
-      };
+      let dbSuccess = false;
+      let emailSuccess = false;
+      let dbErrorDetail = null;
 
-      console.log("Sending to Supabase 'tour_requests' table:", dbPayload);
+      // --- Step 2: Supabase Submission (Primary) ---
+      try {
+        const { error: dbError } = await supabase
+          .from('tour_requests')
+          .insert([dbPayload]);
 
-      const { data, error: dbError } = await supabase
-        .from('tour_requests')
-        .insert([dbPayload])
-        .select();
-
-      if (dbError) {
-        console.error("Supabase Error Details:", dbError);
-        // We throw here to stop the process and show the error to the user (developer)
-        throw new Error(`Database Error: ${dbError.message} (Hint: ${dbError.hint || 'Check table permissions'})`);
+        if (dbError) {
+          dbErrorDetail = dbError;
+          console.warn("Supabase Insert Failed (will attempt fallback):", dbError);
+        } else {
+          dbSuccess = true;
+          console.log("Supabase Insert Successful");
+        }
+      } catch (err) {
+        console.warn("Supabase Exception:", err);
       }
+
+      // --- Step 3: EmailJS Submission (Secondary/Fallback) ---
+      try {
+        // @ts-ignore
+        const env: any = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
+        const serviceId = env.VITE_EMAILJS_SERVICE_ID;
+        const templateId = env.VITE_EMAILJS_TEMPLATE_ID;
+        const publicKey = env.VITE_EMAILJS_PUBLIC_KEY;
+
+        if (serviceId && templateId && publicKey) {
+          await emailjs.send(
+            serviceId, 
+            templateId, 
+            {
+              from_name: safeFormData.fullName,
+              from_email: safeFormData.email,
+              phone: safeFormData.phone,
+              date: safeFormData.date,
+              party_size: safeFormData.partySize,
+              special_requests: safeFormData.specialRequests
+            }, 
+            publicKey
+          );
+          emailSuccess = true;
+          console.log("EmailJS Sent Successfully");
+        } else {
+          console.log("EmailJS not configured.");
+        }
+      } catch (err) {
+        console.warn("EmailJS Failed:", err);
+      }
+
+      // --- Step 4: Critical Failure Check ---
+      // If BOTH failed, we cannot proceed.
+      if (!dbSuccess && !emailSuccess) {
+         let msg = "Unable to save your request. Please call us directly.";
+         if (dbErrorDetail) {
+             msg += ` (System: ${dbErrorDetail.message})`;
+         }
+         throw new Error(msg);
+      }
+
+      // --- Step 5: AI Concierge Response (UX Layer) ---
+      // If we reached here, at least one storage method worked.
       
-      console.log("Supabase Insert Successful:", data);
-
-      // 3. Send Email (Non-blocking)
-      // @ts-ignore
-      const env: any = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
-      const serviceId = env.VITE_EMAILJS_SERVICE_ID;
-      const templateId = env.VITE_EMAILJS_TEMPLATE_ID;
-      const publicKey = env.VITE_EMAILJS_PUBLIC_KEY;
-
-      if (serviceId && templateId && publicKey) {
-        emailjs.send(
-          serviceId, 
-          templateId, 
-          {
-            from_name: safeFormData.fullName,
-            from_email: safeFormData.email,
-            phone: safeFormData.phone,
-            date: safeFormData.date,
-            party_size: safeFormData.partySize,
-            special_requests: safeFormData.specialRequests
-          }, 
-          publicKey
-        ).catch((err) => console.warn("EmailJS failed:", err));
-      } else {
-        console.log("EmailJS not configured, skipping.");
-      }
-
-      // 4. Get AI Concierge Response
       // Artificial delay for smooth UX
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       const result = await submitTourRequest(safeFormData as TourRequest);
       
@@ -103,13 +123,18 @@ const TourForm: React.FC = () => {
         setResponse(result);
         setStatus(LoadingState.SUCCESS);
       } else {
-        throw new Error("Empty response received from Concierge");
+        // Fallback response if AI fails but data was saved
+        setResponse({
+            confirmationId: "WHR-" + Date.now().toString().slice(-4),
+            conciergeMessage: "Thank you! We have securely received your request and will contact you shortly.",
+            estimatedDuration: "60 mins"
+        });
+        setStatus(LoadingState.SUCCESS);
       }
 
     } catch (error: any) {
       console.error("Critical Submission Error:", error);
-      setErrorMessage(error.message || "An unexpected error occurred.");
-      setDebugInfo(JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      setErrorMessage(error.message || "An unexpected error occurred. Please call (302) 419-8890.");
       setStatus(LoadingState.ERROR);
     }
   }, [formData]);
@@ -119,7 +144,6 @@ const TourForm: React.FC = () => {
     setResponse(null);
     setStatus(LoadingState.IDLE);
     setErrorMessage("");
-    setDebugInfo("");
   };
 
   return (
@@ -146,14 +170,11 @@ const TourForm: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
           {status === LoadingState.ERROR && (
              <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-4 rounded relative text-sm">
-                <p className="font-bold text-lg mb-1">Submission Error</p>
-                <p className="mb-2">{errorMessage || "Please check your internet connection."}</p>
-                {debugInfo && (
-                  <details className="mt-2 text-xs font-mono bg-white/50 p-2 rounded border border-red-100">
-                    <summary className="cursor-pointer mb-1">Technical Details</summary>
-                    <pre className="whitespace-pre-wrap break-all">{debugInfo}</pre>
-                  </details>
-                )}
+                <p className="font-bold text-lg mb-1">Submission Issue</p>
+                <p className="mb-2">{errorMessage}</p>
+                <div className="mt-2 text-xs text-red-600/80">
+                    If this persists, please call us directly at <strong>(302) 419-8890</strong> or email <strong>whitehouseresortinc@gmail.com</strong>.
+                </div>
              </div>
           )}
 
