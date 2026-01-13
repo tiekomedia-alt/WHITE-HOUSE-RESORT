@@ -15,6 +15,7 @@ const TourForm: React.FC = () => {
   });
 
   const [status, setStatus] = useState<LoadingState>(LoadingState.IDLE);
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const [response, setResponse] = useState<TourResponse | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -28,77 +29,61 @@ const TourForm: React.FC = () => {
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus(LoadingState.LOADING);
+    setErrorMessage("");
     
     const safeFormData = {
       ...formData,
       partySize: Number(formData.partySize) || 1
     };
 
-    // Fire-and-forget side effects (Supabase & Email)
-    const runBackgroundServices = async () => {
-      // 1. Supabase Insert
-      try {
-        const { data, error } = await supabase
-          .from('tour_requests')
-          .insert([{ 
-            full_name: safeFormData.fullName,
-            email: safeFormData.email,
+    try {
+      // 1. Submit to Supabase (Critical Step - We await this)
+      console.log("Saving to Supabase...");
+      const { data, error: dbError } = await supabase
+        .from('tour_requests')
+        .insert([{ 
+          full_name: safeFormData.fullName,
+          email: safeFormData.email,
+          phone: safeFormData.phone,
+          date: safeFormData.date,
+          party_size: safeFormData.partySize,
+          special_requests: safeFormData.specialRequests
+        }])
+        .select();
+
+      if (dbError) {
+        throw new Error(`Database Error: ${dbError.message} (Code: ${dbError.code})`);
+      }
+      
+      console.log("Supabase Success:", data);
+
+      // 2. Send Email (Side Effect - We don't block on this, but we log it)
+      // @ts-ignore
+      const env: any = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
+      const serviceId = env.VITE_EMAILJS_SERVICE_ID;
+      const templateId = env.VITE_EMAILJS_TEMPLATE_ID;
+      const publicKey = env.VITE_EMAILJS_PUBLIC_KEY;
+
+      if (serviceId && templateId && publicKey) {
+        emailjs.send(
+          serviceId, 
+          templateId, 
+          {
+            from_name: safeFormData.fullName,
+            from_email: safeFormData.email,
             phone: safeFormData.phone,
             date: safeFormData.date,
             party_size: safeFormData.partySize,
             special_requests: safeFormData.specialRequests
-          }])
-          .select();
-        
-        if (error) {
-          console.error("Supabase INSERT ERROR:", error.message, error.details);
-        } else {
-          console.log("Supabase INSERT SUCCESS. Data saved:", data);
-        }
-      } catch (err) {
-        console.error("Supabase CONNECTION ERROR:", err);
+          }, 
+          publicKey
+        ).then(() => console.log("Email sent successfully"))
+         .catch((err) => console.warn("Email failed:", err));
       }
 
-      // 2. EmailJS
-      try {
-        // Safe access to environment variables
-        // @ts-ignore
-        const env: any = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
-        
-        const serviceId = env.VITE_EMAILJS_SERVICE_ID;
-        const templateId = env.VITE_EMAILJS_TEMPLATE_ID;
-        const publicKey = env.VITE_EMAILJS_PUBLIC_KEY;
-
-        if (serviceId && templateId && publicKey) {
-          await emailjs.send(
-            serviceId, 
-            templateId, 
-            {
-              from_name: safeFormData.fullName,
-              from_email: safeFormData.email,
-              phone: safeFormData.phone,
-              date: safeFormData.date,
-              party_size: safeFormData.partySize,
-              special_requests: safeFormData.specialRequests
-            }, 
-            publicKey
-          );
-          console.log("EmailJS SUCCESS");
-        } else {
-            console.warn("EmailJS credentials missing, skipping email.");
-        }
-      } catch (err) {
-        console.warn("Email notification skipped:", err);
-      }
-    };
-
-    // Trigger background services
-    runBackgroundServices();
-
-    // Handle User Interface Response (AI Concierge)
-    try {
-      // Artificial delay for better UX (so the loader doesn't flash too quickly)
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // 3. Get AI Concierge Response
+      // Artificial delay for UX
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       const result = await submitTourRequest(safeFormData as TourRequest);
       
@@ -106,17 +91,13 @@ const TourForm: React.FC = () => {
         setResponse(result);
         setStatus(LoadingState.SUCCESS);
       } else {
-        throw new Error("Empty response received");
+        throw new Error("Empty response received from Concierge");
       }
-    } catch (error) {
-      console.error("Submission critical error:", error);
-      // Fallback to generic success state
-      setResponse({
-        confirmationId: "WHR-OFFLINE-" + Date.now().toString().slice(-4),
-        conciergeMessage: "We have received your request. Our coordinator will contact you shortly to confirm your appointment.",
-        estimatedDuration: "60 minutes"
-      });
-      setStatus(LoadingState.SUCCESS);
+
+    } catch (error: any) {
+      console.error("Form Submission Error:", error);
+      setErrorMessage(error.message || "An unexpected error occurred.");
+      setStatus(LoadingState.ERROR);
     }
   }, [formData]);
 
@@ -124,6 +105,7 @@ const TourForm: React.FC = () => {
     setFormData({ fullName: '', email: '', phone: '', date: '', partySize: 1, specialRequests: '' });
     setResponse(null);
     setStatus(LoadingState.IDLE);
+    setErrorMessage("");
   };
 
   return (
@@ -150,7 +132,8 @@ const TourForm: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
           {status === LoadingState.ERROR && (
              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded relative text-sm text-center">
-                Something went wrong. Please call us at (302) 419-8890 instead.
+                <p className="font-bold">Submission Failed</p>
+                <p>{errorMessage || "Please try again or call us at (302) 419-8890."}</p>
              </div>
           )}
 
