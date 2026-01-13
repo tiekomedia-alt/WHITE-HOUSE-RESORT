@@ -6,7 +6,7 @@ const Hero: React.FC = () => {
     <div className="relative w-full h-[80vh] md:h-[70vh] lg:h-screen overflow-hidden">
       {/* Hero Image */}
       <div 
-        className="absolute inset-0 bg-cover bg-top bg-no-repeat transform transition-transform duration-10000 hover:scale-105 brightness-110 contrast-110"
+        className="absolute inset-0 bg-cover bg-top bg-no-repeat transform transition-transform duration-[10000ms] hover:scale-105 brightness-110 contrast-110"
         style={{
           backgroundImage: 'url("https://res.cloudinary.com/dspngcwzj/image/upload/v1768006867/Home_c2ce0v.jpg")',
         }}

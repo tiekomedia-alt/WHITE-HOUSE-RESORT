@@ -36,8 +36,9 @@ const TourForm: React.FC = () => {
 
     // Fire-and-forget side effects (Supabase & Email)
     const runBackgroundServices = async () => {
+      // 1. Supabase Insert
       try {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('tour_requests')
           .insert([{ 
             full_name: safeFormData.fullName,
@@ -46,12 +47,19 @@ const TourForm: React.FC = () => {
             date: safeFormData.date,
             party_size: safeFormData.partySize,
             special_requests: safeFormData.specialRequests
-          }]);
-        if (error) console.warn("Supabase log:", error.message);
+          }])
+          .select();
+        
+        if (error) {
+          console.error("Supabase INSERT ERROR:", error.message, error.details);
+        } else {
+          console.log("Supabase INSERT SUCCESS. Data saved:", data);
+        }
       } catch (err) {
-        console.warn("Supabase connection skipped:", err);
+        console.error("Supabase CONNECTION ERROR:", err);
       }
 
+      // 2. EmailJS
       try {
         // Safe access to environment variables
         // @ts-ignore
@@ -75,6 +83,7 @@ const TourForm: React.FC = () => {
             }, 
             publicKey
           );
+          console.log("EmailJS SUCCESS");
         } else {
             console.warn("EmailJS credentials missing, skipping email.");
         }
