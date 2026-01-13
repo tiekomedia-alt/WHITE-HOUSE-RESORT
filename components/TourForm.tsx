@@ -16,6 +16,7 @@ const TourForm: React.FC = () => {
 
   const [status, setStatus] = useState<LoadingState>(LoadingState.IDLE);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [debugInfo, setDebugInfo] = useState<string>("");
   const [response, setResponse] = useState<TourResponse | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -30,34 +31,44 @@ const TourForm: React.FC = () => {
     e.preventDefault();
     setStatus(LoadingState.LOADING);
     setErrorMessage("");
+    setDebugInfo("");
     
+    // 1. Prepare Data
     const safeFormData = {
       ...formData,
       partySize: Number(formData.partySize) || 1
     };
 
+    console.log("Attempting submission with:", safeFormData);
+
     try {
-      // 1. Submit to Supabase (Critical Step - We await this)
-      console.log("Saving to Supabase...");
+      // 2. Submit to Supabase
+      // We define the payload explicitly to match snake_case columns in DB
+      const dbPayload = { 
+        full_name: safeFormData.fullName,
+        email: safeFormData.email,
+        phone: safeFormData.phone,
+        date: safeFormData.date,
+        party_size: safeFormData.partySize,
+        special_requests: safeFormData.specialRequests
+      };
+
+      console.log("Sending to Supabase 'tour_requests' table:", dbPayload);
+
       const { data, error: dbError } = await supabase
         .from('tour_requests')
-        .insert([{ 
-          full_name: safeFormData.fullName,
-          email: safeFormData.email,
-          phone: safeFormData.phone,
-          date: safeFormData.date,
-          party_size: safeFormData.partySize,
-          special_requests: safeFormData.specialRequests
-        }])
+        .insert([dbPayload])
         .select();
 
       if (dbError) {
-        throw new Error(`Database Error: ${dbError.message} (Code: ${dbError.code})`);
+        console.error("Supabase Error Details:", dbError);
+        // We throw here to stop the process and show the error to the user (developer)
+        throw new Error(`Database Error: ${dbError.message} (Hint: ${dbError.hint || 'Check table permissions'})`);
       }
       
-      console.log("Supabase Success:", data);
+      console.log("Supabase Insert Successful:", data);
 
-      // 2. Send Email (Side Effect - We don't block on this, but we log it)
+      // 3. Send Email (Non-blocking)
       // @ts-ignore
       const env: any = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
       const serviceId = env.VITE_EMAILJS_SERVICE_ID;
@@ -77,12 +88,13 @@ const TourForm: React.FC = () => {
             special_requests: safeFormData.specialRequests
           }, 
           publicKey
-        ).then(() => console.log("Email sent successfully"))
-         .catch((err) => console.warn("Email failed:", err));
+        ).catch((err) => console.warn("EmailJS failed:", err));
+      } else {
+        console.log("EmailJS not configured, skipping.");
       }
 
-      // 3. Get AI Concierge Response
-      // Artificial delay for UX
+      // 4. Get AI Concierge Response
+      // Artificial delay for smooth UX
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const result = await submitTourRequest(safeFormData as TourRequest);
@@ -95,8 +107,9 @@ const TourForm: React.FC = () => {
       }
 
     } catch (error: any) {
-      console.error("Form Submission Error:", error);
+      console.error("Critical Submission Error:", error);
       setErrorMessage(error.message || "An unexpected error occurred.");
+      setDebugInfo(JSON.stringify(error, Object.getOwnPropertyNames(error)));
       setStatus(LoadingState.ERROR);
     }
   }, [formData]);
@@ -106,6 +119,7 @@ const TourForm: React.FC = () => {
     setResponse(null);
     setStatus(LoadingState.IDLE);
     setErrorMessage("");
+    setDebugInfo("");
   };
 
   return (
@@ -131,9 +145,15 @@ const TourForm: React.FC = () => {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
           {status === LoadingState.ERROR && (
-             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded relative text-sm text-center">
-                <p className="font-bold">Submission Failed</p>
-                <p>{errorMessage || "Please try again or call us at (302) 419-8890."}</p>
+             <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-4 rounded relative text-sm">
+                <p className="font-bold text-lg mb-1">Submission Error</p>
+                <p className="mb-2">{errorMessage || "Please check your internet connection."}</p>
+                {debugInfo && (
+                  <details className="mt-2 text-xs font-mono bg-white/50 p-2 rounded border border-red-100">
+                    <summary className="cursor-pointer mb-1">Technical Details</summary>
+                    <pre className="whitespace-pre-wrap break-all">{debugInfo}</pre>
+                  </details>
+                )}
              </div>
           )}
 
