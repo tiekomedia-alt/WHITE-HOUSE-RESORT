@@ -56,21 +56,22 @@ const TourForm: React.FC = () => {
 
       // --- Step 2: Supabase Submission (Primary) ---
       try {
-        // We select the ID to confirm the row was actually created in the DB
-        const { data, error: dbError } = await supabase
+        // FIX: We removed .select('id') because it triggers a 'SELECT' permission check.
+        // Public users can INSERT but should not be allowed to SELECT (read) data for security.
+        const { error: dbError } = await supabase
           .from('tour_requests')
-          .insert([dbPayload])
-          .select('id');
+          .insert([dbPayload]);
 
         if (dbError) {
           dbErrorDetail = dbError;
           console.warn("Supabase Insert Failed (will attempt fallback):", dbError);
         } else {
           dbSuccess = true;
-          console.log("Supabase Insert Successful", data);
-          if (data && data.length > 0) {
-            realDbId = `WHR-DB-${data[0].id}`; // Use real DB ID
-          }
+          console.log("Supabase Insert Successful");
+          // Generate a client-side Confirmation ID since we can't read the DB ID back
+          const randomSuffix = Math.floor(1000 + Math.random() * 9000); // 4 digit random
+          const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
+          realDbId = `WHR-${timestamp}-${randomSuffix}`;
         }
       } catch (err) {
         console.warn("Supabase Exception:", err);
