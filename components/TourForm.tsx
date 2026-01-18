@@ -52,19 +52,25 @@ const TourForm: React.FC = () => {
       let dbSuccess = false;
       let emailSuccess = false;
       let dbErrorDetail = null;
+      let realDbId: string | null = null;
 
       // --- Step 2: Supabase Submission (Primary) ---
       try {
-        const { error: dbError } = await supabase
+        // We select the ID to confirm the row was actually created in the DB
+        const { data, error: dbError } = await supabase
           .from('tour_requests')
-          .insert([dbPayload]);
+          .insert([dbPayload])
+          .select('id');
 
         if (dbError) {
           dbErrorDetail = dbError;
           console.warn("Supabase Insert Failed (will attempt fallback):", dbError);
         } else {
           dbSuccess = true;
-          console.log("Supabase Insert Successful");
+          console.log("Supabase Insert Successful", data);
+          if (data && data.length > 0) {
+            realDbId = `WHR-DB-${data[0].id}`; // Use real DB ID
+          }
         }
       } catch (err) {
         console.warn("Supabase Exception:", err);
@@ -88,7 +94,8 @@ const TourForm: React.FC = () => {
               phone: safeFormData.phone,
               date: safeFormData.date,
               party_size: safeFormData.partySize,
-              special_requests: safeFormData.specialRequests
+              special_requests: safeFormData.specialRequests,
+              confirmation_id: realDbId || "Pending"
             }, 
             publicKey
           );
@@ -120,12 +127,16 @@ const TourForm: React.FC = () => {
       const result = await submitTourRequest(safeFormData as TourRequest);
       
       if (result) {
+        // If we have a real DB ID, override the AI's mock ID
+        if (realDbId) {
+          result.confirmationId = realDbId;
+        }
         setResponse(result);
         setStatus(LoadingState.SUCCESS);
       } else {
         // Fallback response if AI fails but data was saved
         setResponse({
-            confirmationId: "WHR-" + Date.now().toString().slice(-4),
+            confirmationId: realDbId || "WHR-" + Date.now().toString().slice(-4),
             conciergeMessage: "Thank you! We have securely received your request and will contact you shortly.",
             estimatedDuration: "60 mins"
         });
