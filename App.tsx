@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Hero from './components/Hero';
 import TourForm from './components/TourForm';
@@ -348,9 +347,12 @@ const App: React.FC = () => {
          </div>
          
          {/* Copyright Footer */}
-         <div className="mt-16 border-t border-whr-gold/20 pt-8">
+         <div className="mt-16 border-t border-whr-gold/20 pt-8 space-y-2">
             <p className="font-serif text-xs text-gray-500 uppercase tracking-widest">
               © 2026 White House Resort Inc. All rights reserved.
+            </p>
+            <p className="font-serif text-xs text-whr-gold tracking-widest">
+               WEBSITE DESIGNED & DEVELOPED BY TIEKO MEDIA LIMITED
             </p>
          </div>
       </footer>

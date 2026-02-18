@@ -36,14 +36,16 @@ const Hero: React.FC = () => {
         
         <div className="mt-8 md:mt-12 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
           <a 
-            href="#schedule-tour"
-            className="group relative inline-flex items-center justify-center overflow-hidden rounded-sm border border-white/60 px-8 py-3 md:px-12 md:py-4 transition-all duration-300 hover:border-whr-gold hover:bg-black/30 backdrop-blur-sm"
+            href="https://docs.google.com/forms/d/e/1FAIpQLSc6r9J6QovYDwiwT-VP0bA3CXLdcPUg_1fV5pI-yIAQxRvfpQ/viewform?usp=header"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group relative inline-flex items-center justify-center overflow-hidden rounded-sm border-2 border-whr-gold bg-black/60 px-8 py-3 md:px-12 md:py-4 transition-all duration-300 hover:bg-black/80 hover:scale-105 shadow-[0_0_20px_rgba(0,0,0,0.5)] backdrop-blur-md"
           >
             {/* Hover Effect */}
-            <div className="absolute inset-0 translate-y-full bg-whr-gold/90 transition-transform duration-500 ease-out group-hover:translate-y-0"></div>
+            <div className="absolute inset-0 translate-y-full bg-whr-gold transition-transform duration-500 ease-out group-hover:translate-y-0"></div>
             
             {/* Button Content */}
-            <span className="relative z-10 font-display font-bold uppercase tracking-[0.2em] text-white text-xs md:text-sm lg:text-base group-hover:text-white transition-colors">
+            <span className="relative z-10 font-display font-bold uppercase tracking-[0.2em] text-white text-xs md:text-sm lg:text-base group-hover:text-white transition-colors text-shadow">
               Schedule a Tour
             </span>
           </a>
