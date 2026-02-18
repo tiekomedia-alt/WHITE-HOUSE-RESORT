@@ -14,21 +14,20 @@ const Hero: React.FC = () => {
       ></div>
 
       {/* Overlay - Gradient for better text readability */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60"></div>
-      <div className="absolute inset-0 bg-black/20"></div>
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/70"></div>
+      <div className="absolute inset-0 bg-black/30"></div>
 
       {/* Content */}
       <div className="relative h-full flex flex-col items-center justify-center text-center px-4 pt-10 md:pt-16">
         
         <div className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-          <h1 className="flex flex-col items-center justify-center">
-            {/* Top Line: Stately, Classic Serif */}
-            <span className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-white/90 font-display tracking-[0.2em] uppercase drop-shadow-lg mb-2 md:mb-4">
+          <h1 className="flex flex-col items-center justify-center gap-2">
+            <span className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-white font-display tracking-[0.25em] uppercase drop-shadow-2xl" 
+              style={{ textShadow: '0 2px 20px rgba(0,0,0,0.8), 0 4px 40px rgba(0,0,0,0.6)' }}>
               Where Dreams
             </span>
-            
-            {/* Bottom Line: Romantic, Script */}
-            <span className="font-pinyon text-whr-goldLight text-6xl sm:text-7xl md:text-8xl lg:text-[7rem] leading-none drop-shadow-2xl filter brightness-110">
+            <span className="font-pinyon text-whr-goldLight text-7xl sm:text-8xl md:text-9xl lg:text-[8rem] leading-none filter brightness-125"
+              style={{ textShadow: '0 4px 30px rgba(0,0,0,0.9), 0 2px 10px rgba(0,0,0,0.8), 0 0 60px rgba(197,160,89,0.4)' }}>
               Come True
             </span>
           </h1>
